@@ -1,0 +1,196 @@
+\documentclass[14pt, russian, onesize]{extreport}
+
+% BASE
+\usepackage[a4paper, margin=0.5in]{geometry}
+\usepackage{dingbat} % NICE LINEBREAK
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{enumitem}
+\usepackage{amsfonts}
+\usepackage{extarrows}
+\usepackage{import}
+\usepackage{indentfirst}
+\usepackage{caption}
+\captionsetup{justification=raggedright,singlelinecheck=false}
+\usepackage{subcaption}
+\usepackage{hyperref}
+\usepackage{indentfirst}
+\usepackage{color}
+\usepackage{minted}
+\usepackage{enumitem}
+\usepackage{xparse}
+\usepackage{etoolbox}
+\usepackage{array}
+
+% FONTS XeLaTeX
+\usepackage[no-math]{fontspec}
+\usepackage{mathspec}
+\defaultfontfeatures{Ligatures={TeX},Renderer=Basic}
+\setmathfont(Digits){Times New Roman}
+\setmainfont{Times New Roman}
+\setsansfont{Arial}
+\setmonofont{Consolas}
+\newfontfamily\cyrillicfont[Script=Cyrillic]{Times New Roman}
+\newfontfamily\cyrillicfontsf[Script=Cyrillic]{Arial}
+\newfontfamily\cyrillicfonttt[Script=Cyrillic]{Consolas}
+\usepackage{polyglossia}
+\setdefaultlanguage{russian}
+
+
+% MACRO
+\delimitershortfall-1sp
+\newcommand\abs[1]{\left|#1\right|}
+
+% LISTINGS
+\definecolor{bg}{rgb}{1,1,1}
+\newminted{cpp}{fontsize=\footnotesize, bgcolor=bg, breakafter=, breaklines, breakautoindent=true, breaksymbolleft=\raisebox{0.8ex}{ \small\reflectbox{\carriagereturn}}, breaksymbolright=\small\carriagereturn, }
+\newmintedfile{cpp}{linenos, fontsize=\footnotesize, bgcolor=bg, breaklines, breakafter=,}
+\newenvironment{code}{\captionsetup{type=listing}}{}
+
+% BASH
+
+\ExplSyntaxOn
+\NewDocumentCommand{\captureshell}{som}
+ {
+  \sdaau_captureshell:Ne \l__sdaau_captureshell_out_tl { #3 }
+  \IfBooleanT { #1 }
+   {% we may need to stringify the result
+    \tl_set:Nx \l__sdaau_captureshell_out_tl
+     { \tl_to_str:N \l__sdaau_captureshell_out_tl }
+   }
+  \IfNoValueTF { #2 }
+   {
+    \tl_use:N \l__sdaau_captureshell_out_tl
+   }
+   {
+    \tl_set_eq:NN #2 \l__sdaau_captureshell_out_tl
+   }
+ }
+
+\tl_new:N \l__sdaau_captureshell_out_tl
+
+\cs_new_protected:Nn \sdaau_captureshell:Nn
+ {
+  \sys_get_shell:nnN { #2 } { } #1
+  \tl_trim_spaces:N #1 % remove leading and trailing spaces
+ }
+\cs_generate_variant:Nn \sdaau_captureshell:Nn { Ne }
+\ExplSyntaxOff
+
+\newcommand\ProcessOutput[1]{%
+  \renewcommand*{\do}[1]{
+      \begin{code}
+          \caption{\textbf{##1}}
+          \cppfile{##1}
+      \end{code}
+  }%
+  \expandafter\docsvlist\expandafter{#1}%
+}
+\parindent=0pt
+
+\makeatletter
+\def\inputAllFiles#1#2{%
+    \captureshell*[\cppfiles]{ls #1/*.#2 | paste -sd , -} 
+    \ProcessOutput\cppfiles
+}
+\makeatother
+
+% HYPERLINKS
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=blue,
+}
+
+\newcolumntype{I}{>{\centering\arraybackslash}p{0.18in}}
+% Two-bit centered column.
+\newcolumntype{W}{>{\centering\arraybackslash}p{0.36in}}
+% Three-bit centered column.
+\newcolumntype{F}{>{\centering\arraybackslash}p{0.54in}}
+% Four-bit centered column.
+\newcolumntype{Y}{>{\centering\arraybackslash}p{0.72in}}
+% Five-bit centered column.
+\newcolumntype{R}{>{\centering\arraybackslash}p{0.9in}}
+% Six-bit centered column.
+\newcolumntype{S}{>{\centering\arraybackslash}p{1.08in}}
+% Seven-bit centered column.
+\newcolumntype{O}{>{\centering\arraybackslash}p{1.26in}}
+% Eight-bit centered column.
+\newcolumntype{E}{>{\centering\arraybackslash}p{1.44in}}
+% Ten-bit centered column.
+\newcolumntype{T}{>{\centering\arraybackslash}p{1.8in}}
+% Twelve-bit centered column.
+\newcolumntype{M}{>{\centering\arraybackslash}p{2.2in}}
+% Sixteen-bit centered column.
+\newcolumntype{K}{>{\centering\arraybackslash}p{2.88in}}
+% Twenty-bit centered column.
+\newcolumntype{U}{>{\centering\arraybackslash}p{3.6in}}
+% Twenty-bit centered column.
+\newcolumntype{L}{>{\centering\arraybackslash}p{3.6in}}
+% Twenty-five-bit centered column.
+\newcolumntype{J}{>{\centering\arraybackslash}p{4.5in}}
+
+% START
+\begin{document}
+\begin{tabular}{|p{8cm}|p{3cm}|p{3cm}|}
+    \hline
+    Лабораторная работа №4 & Б10 & 2022\\
+    \hline
+    OpenMP  & \multicolumn{2}{|c|}{Хорохорин Андрей Сергеевич}\\
+    \hline
+\end{tabular}
+\subsection*{ Цель работы }
+Знакомство с основами многопоточного программирования.
+\subsection*{ Инструментарий }
+Секция генерируется автоматически при компиляции
+\begin{enumerate}
+    \item \captureshell{clang++ --version | head -n 1}
+    \item \captureshell{vim --version | head -n 1}
+    \item \captureshell{make --version | head -n 1}
+    \item \captureshell{xelatex --version | head -n 1}
+    \item OpenMP standard 2.0
+\end{enumerate}
+
+\section*{Описание конструкция OpenMP для распараллеливания команд}
+
+\section*{Описание работы написанного кода}
+
+\section*{Результат работы программы}
+Секция генерируется автоматически при компиляции
+
+Модель процессора, на котором проводилось тестирование:
+
+\texttt{ \captureshell*{cat /proc/cpuinfo | grep 'model name' | head -n 1} }
+
+\captureshell*[\devnull]{make -C ../ run &> /dev/null} 
+
+\def\inputverbatim #1{\bgroup
+  \def\do##1{\catcode`##1=12 }\dospecials
+  \def\par{\endgraf\noindent\null}\obeylines\obeyspaces
+  \tt \noindent
+    \input{#1}
+  \egroup
+}
+
+% { \footnotesize
+% \inputverbatim{../output} % TODO
+% }
+
+\section*{Экспериментальная часть}
+
+\section*{Список источников}
+\begin{itemize}
+    \item \href{https://www.openmp.org//wp-content/uploads/cspec20.pdf}
+        {Документация по OpenMP}
+\end{itemize}
+
+\section*{Листинг кода}
+Секция генерируется автоматически при компиляции
+\inputAllFiles{../include}{h}
+
+\inputAllFiles{../src}{cpp}
+
+
+\end{document}
