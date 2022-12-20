@@ -2,8 +2,8 @@ CC = clang++
 src_dir = src
 obj_dir = obj
 header_dir = include
-# flags = -std=c++20 -D _CRT_SECURE_NO_WARNINGS -D _USE_MATH_DEFINES -Wall -Werror -Wextra -O2 -I $(header_dir)
-flags = -fopenmp -std=c++20 -D _CRT_SECURE_NO_WARNINGS -D _USE_MATH_DEFINES -Wall -Wextra -O2 -I $(header_dir)
+flags = -std=c++20 -D _CRT_SECURE_NO_WARNINGS -D _USE_MATH_DEFINES -Wall -Wextra -I $(header_dir)
+# flags = -fopenmp -std=c++20 -D _CRT_SECURE_NO_WARNINGS -D _USE_MATH_DEFINES -Wall -Wextra -O2 -I $(header_dir)
 
 headers = $(wildcard $(header_dir)/*.hpp)
 sources = $(wildcard $(src_dir)/*.cpp)
@@ -28,7 +28,7 @@ clean:
 	@rm -rf obj $(product_name)
 
 run: all
-	@./$(product_name) -1 test_data/in.pnm out.pnm
+	@./$(product_name) -1 test_data/in.pgm out.pgm
 
 
 .PHONY: clean build

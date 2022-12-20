@@ -2,5 +2,4 @@ obj
 omp4
 compile_commands.json
 .cache
-output.pnm
-riscv_spec_repo
+*.pgm

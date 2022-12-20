@@ -40,8 +40,8 @@ jobs:
       - name: install_deps
         id: install_deps
         run: | 
-          $lvl = If (((Get-ChildItem -Path .. -Include @('hard.c', 'hard.cpp') -Recurse -ErrorAction SilentlyContinue -Force).FullName).Length -ne 0) {"hard"} 
-                  Else {If (((Get-ChildItem -Path .. -Include @('easy.c', 'easy.cpp') -Recurse -ErrorAction SilentlyContinue -Force).FullName).Length -ne 0) {"easy"} 
+          $lvl = If (((Get-ChildItem -Path ../src -Include @('hard.c', 'hard.cpp') -Recurse -ErrorAction SilentlyContinue -Force).FullName).Length -ne 0) {"hard"} 
+                  Else {If (((Get-ChildItem -Path ../src -Include @('easy.c', 'easy.cpp') -Recurse -ErrorAction SilentlyContinue -Force).FullName).Length -ne 0) {"easy"} 
                     Else {"invalid"} }
           echo "lvl=$lvl" >> $env:GITHUB_OUTPUT
           if ('${{ matrix.os }}' -eq 'windows-latest')
