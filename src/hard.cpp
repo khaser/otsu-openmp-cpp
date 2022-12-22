@@ -33,6 +33,7 @@ int main(int argc, char* argv[]) {
     PgmImage picture(fin);
 
     std::vector<uint8_t> partition;
+
     double start_time = omp_get_wtime();
     if (threads == -1) {
         partition = OtsuSinglethread(picture.hist);

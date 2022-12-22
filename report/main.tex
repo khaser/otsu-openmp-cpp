@@ -19,9 +19,6 @@
 \usepackage{color}
 \usepackage{minted}
 \usepackage{enumitem}
-\usepackage{xparse}
-\usepackage{etoolbox}
-\usepackage{array}
 
 % FONTS XeLaTeX
 \usepackage[no-math]{fontspec}
@@ -37,7 +34,6 @@
 \usepackage{polyglossia}
 \setdefaultlanguage{russian}
 
-
 % MACRO
 \delimitershortfall-1sp
 \newcommand\abs[1]{\left|#1\right|}
@@ -49,6 +45,9 @@
 \newenvironment{code}{\captionsetup{type=listing}}{}
 
 % BASH
+\usepackage{xparse}
+\usepackage{etoolbox}
+\usepackage{array}
 
 \ExplSyntaxOn
 \NewDocumentCommand{\captureshell}{som}
@@ -105,7 +104,10 @@
 }
 
 % GRAPHICS
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.9}
 \graphicspath{ {../test_data} }
+
 
 % START
 \begin{document}
@@ -140,7 +142,7 @@
         по потокам. Само распределение может быть реализовано различным образом:
         за это отвечают аргументы type и chunk. Более подробно про различные
         распределения и их эффективность в данной задаче можно ознакомиться
-        в секции <<Экспериментальная часть>>.
+        в \hyperref[experiment]{анализе результатов эксперимента}.
     \item \texttt{\#pragma omp critical}\\
         Объявляет некоторый блок кода как критическую секцию, также называемую
         mutex. Данная секция в каждый момент времени может исполняться лишь 
@@ -221,7 +223,7 @@ vector<uint8_t> OtsuMultithread(const vector<unsigned int>& hist) {
     return part;
 }
 \end{cppcode}
-\subsection*{Перебор разбиений}
+\subsection*{Перебор разбиений} \label{implementation}
 Реализация перебора является рекурсивной, благодаря чему работает для 
 произвольного количества цветовых зон, на которые делится изображение.
 
@@ -324,8 +326,129 @@ void relax_ans() {
     \includegraphics[width=0.45\textwidth]{../out.png}
 \end{figure}
 
-\section*{Экспериментальная часть}
-% TODO
+\section*{Экспериментальная часть}\label{experiment}
+Все результаты по времени, изображённые на графиках ниже, взяты как 
+сумма времени исполнения 10 последовательных запусков. Замеры
+производились следующим скриптом, использовалась директива \texttt{schedule(runtime)}
+для управления schedule через переменную окружения.
+\inputminted[fontsize=\footnotesize]{bash}{../runner.sh}
+
+\begin{tikzpicture}
+    \begin{axis}[
+        title = Стандартные chunk\_size,
+        xlabel = {потоки},
+        xtick={1,2,3,4},
+        xmin = 0,
+        ylabel = {время, ms},
+        legend pos = north east
+        ]
+        \legend{ 
+            dynamic, 
+            static,
+            guided,
+        };
+        \addplot[blue, mark = *] table {
+            th time
+            1  1.317469
+            2  0.7849083
+            3  0.5440092
+            4  0.4044590
+        };
+        \addplot[red, mark = *] table {
+            th time
+          1 1.310493
+          2 1.108694
+          3 1.0002051
+          4 1.0508911
+        };
+        \addplot[green, mark = *] table {
+            th time
+         1 1.510582
+         2 .9630511
+         3 .7189546
+         4 .5656959
+        };
+        \addplot[dashed, draw = black] {0.8622980};
+    \end{axis}
+\end{tikzpicture}
+\begin{tikzpicture}
+    \begin{semilogxaxis}[
+        log basis x=2,
+        title = Различные chunk\_size на 4-х потоках,
+        xlabel = {chunk\_size},
+        xtick  = {1, 2, 4, 8, 16, 32, 64},
+        ylabel = {время, ms},
+        legend pos = north west
+        ]
+        \legend{ 
+            dynamic, 
+            static,
+            guided,
+        };
+        \addplot[blue, mark = *] table {
+            th time
+            1 .4295223
+            2 .4336456
+            4 .4312994
+            8 .4928696
+           16 .9589350
+           32 .8740137
+           64 .9642729
+        };
+        \addplot[red, mark = *] table {
+            1 .4704731
+            2 .4771130
+            4 .5105021
+            8 .5519331
+           16 .5769851
+           32 .7102234
+           64 1.0508911
+        };
+        \addplot[green, mark = *] table {
+            th time
+            1 .5656959
+            2 .5761520
+            4 .5677764
+            8 .6263544
+           16 .7070798
+           32 .7851832
+           64 1.176031
+        };
+        \addplot[dashed, domain = 0:64, draw = black] table {
+            th time
+            1 0.8622980
+           64 0.8622980
+        };
+    \end{semilogxaxis}
+\end{tikzpicture}
+
+Пунктирной линией показано время работы программы на одном потоке без OpenMP.
+На самом деле в данной ситуации какое-то время тратится на инициализацию OpenMP,
+даже если код не заходит в параллельную секцию, поэтому можно думать, что
+реальное время работы одного пока немного меньше.
+
+Давайте я вкратце расскажу про различные schedule и поймём, почему результаты
+именно такие.
+\begin{itemize}
+    \item \texttt{dynamic}~--- создаёт очередь из всех задач, после того,
+        как поток освободился мы отдаём ему очередную задачу на исполнение.
+    \item \texttt{static}~--- для каждого из потоков задачи распределены
+        заранее примерно поровну. Но вот на сколько это поровну окажется близким
+        к правде может сильно варьироваться.
+    \item \texttt{guided}~--- работает похожим на dynamic образом, но планировщик
+        пытается составить очередь с уменьшением размера исполняемой задачи.
+        Теоретически это хорошо, потому что не может получиться так,
+        что в конце одному из потоков достанется большая задача, которую он
+        будет исполнять, когда как другие потоки будут просто простаивать.
+\end{itemize}
+Могу предположить, что \texttt{guided} работает медленнее \texttt{dynamic},
+так как планировщику требуется дополнительно много времени на планирование и не 
+факт что оно будет успешным, а размер итераций в моей реализации всегда убывает
+просто как следствие \hyperref[implementation]{структуры алгоритма}. 
+\texttt{static} хорошо подходит для ситуаций, когда потоков очень много и
+\texttt{dynamic} тратит много времени на реализацию очереди задач. Но у меня
+ядер мало, поэтому \texttt{static} показывает себя не очень хорошо.
+
 \section*{Список источников}
 \begin{itemize}
     \item \href{https://www.openmp.org//wp-content/uploads/cspec20.pdf}

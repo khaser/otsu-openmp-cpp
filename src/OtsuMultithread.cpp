@@ -59,7 +59,7 @@ void get_partition(int tl, int cur_th) {
     if (cur_th == M - 1) {
         relax_ans();
     } else if (cur_th == 0) {
-#pragma omp for schedule(dynamic, 1)
+#pragma omp for schedule(runtime)
         for (size_t i = tl; i < MAXP; ++i) {
             cur_part[cur_th] = i;
             get_partition(i + 1, cur_th + 1);
