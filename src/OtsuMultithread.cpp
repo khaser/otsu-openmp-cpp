@@ -73,7 +73,7 @@ void get_partition(int tl, int cur_th) {
 } //end anonymous namespace
 
 
-vector<uint8_t> Otsu(const vector<unsigned int>& hist) {
+vector<uint8_t> OtsuMultithread(const vector<unsigned int>& hist) {
     N = std::accumulate(hist.begin(), hist.end(), 0);
     hist_prefix.resize(MAXP + 1, 0);
     w_hist_prefix.resize(MAXP + 1, 0);

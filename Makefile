@@ -32,7 +32,7 @@ single: all
 	@./$(product_name) -1 test_data/in.pgm out.pgm
 
 parallel: all
-	@./$(product_name) 2 test_data/in.pgm out.pgm
+	@./$(product_name) 4 test_data/in.pgm out.pgm
 
 
 .PHONY: clean build

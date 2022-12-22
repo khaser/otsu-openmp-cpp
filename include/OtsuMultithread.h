@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <vector>
 
-std::vector<uint8_t> Otsu(const std::vector<unsigned int>& hist);
+std::vector<uint8_t> OtsuMultithread(const std::vector<unsigned int>& hist);
 
 #endif
 

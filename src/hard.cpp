@@ -35,10 +35,10 @@ int main(int argc, char* argv[]) {
     std::vector<uint8_t> partition;
     double start_time = omp_get_wtime();
     if (threads == -1) {
-        partition = OtsuPartition(picture.hist).part;
+        partition = OtsuSinglethread(picture.hist);
     } else {
         if (threads != 0) omp_set_num_threads(threads);
-        partition = Otsu(picture.hist);
+        partition = OtsuMultithread(picture.hist);
     }
     std::cout <<  "Time (" << threads << " thread(s)): " << \
         omp_get_wtime() - start_time << " ms\n";
