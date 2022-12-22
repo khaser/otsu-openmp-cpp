@@ -44,8 +44,8 @@
 
 % LISTINGS
 \definecolor{bg}{rgb}{1,1,1}
-\newminted{cpp}{fontsize=\footnotesize, bgcolor=bg, breakafter=, breaklines, breakautoindent=true, breaksymbolleft=\raisebox{0.8ex}{ \small\reflectbox{\carriagereturn}}, breaksymbolright=\small\carriagereturn, }
-\newmintedfile{cpp}{linenos, fontsize=\footnotesize, bgcolor=bg, breaklines, breakafter=,}
+\newminted{cpp}{linenos,fontsize=\footnotesize, bgcolor=bg, breakafter=, breaklines, breakautoindent=true, breaksymbolleft=\raisebox{0.8ex}{ \small\reflectbox{\carriagereturn}}, breaksymbolright=\small\carriagereturn, }
+\newmintedfile{cpp}{fontsize=\footnotesize, bgcolor=bg, breaklines, breakafter=,}
 \newenvironment{code}{\captionsetup{type=listing}}{}
 
 % BASH
@@ -104,33 +104,8 @@
     urlcolor=blue,
 }
 
-\newcolumntype{I}{>{\centering\arraybackslash}p{0.18in}}
-% Two-bit centered column.
-\newcolumntype{W}{>{\centering\arraybackslash}p{0.36in}}
-% Three-bit centered column.
-\newcolumntype{F}{>{\centering\arraybackslash}p{0.54in}}
-% Four-bit centered column.
-\newcolumntype{Y}{>{\centering\arraybackslash}p{0.72in}}
-% Five-bit centered column.
-\newcolumntype{R}{>{\centering\arraybackslash}p{0.9in}}
-% Six-bit centered column.
-\newcolumntype{S}{>{\centering\arraybackslash}p{1.08in}}
-% Seven-bit centered column.
-\newcolumntype{O}{>{\centering\arraybackslash}p{1.26in}}
-% Eight-bit centered column.
-\newcolumntype{E}{>{\centering\arraybackslash}p{1.44in}}
-% Ten-bit centered column.
-\newcolumntype{T}{>{\centering\arraybackslash}p{1.8in}}
-% Twelve-bit centered column.
-\newcolumntype{M}{>{\centering\arraybackslash}p{2.2in}}
-% Sixteen-bit centered column.
-\newcolumntype{K}{>{\centering\arraybackslash}p{2.88in}}
-% Twenty-bit centered column.
-\newcolumntype{U}{>{\centering\arraybackslash}p{3.6in}}
-% Twenty-bit centered column.
-\newcolumntype{L}{>{\centering\arraybackslash}p{3.6in}}
-% Twenty-five-bit centered column.
-\newcolumntype{J}{>{\centering\arraybackslash}p{4.5in}}
+% GRAPHICS
+\graphicspath{ {../test_data} }
 
 % START
 \begin{document}
@@ -154,9 +129,175 @@
 \end{enumerate}
 
 \section*{Описание конструкция OpenMP для распараллеливания команд}
-
+В рамках работы мною были использованы следующие директивы OpenMP:
+\begin{itemize}
+    \item \texttt{\#pragma omp parallel}\\
+        Объявляет начало блока, в котором код будет исполняться параллельно.
+        Весь код вне этой директивы исполняется одним главным потоком. 
+    \item \texttt{\#pragma omp for schedule(type, chunk)}\\
+        Явно задаёт способ выполнения цикла на нескольких потоках. А именно
+        каждая итерация объявляется как задача, а затем эти задачи распределяются
+        по потокам. Само распределение может быть реализовано различным образом:
+        за это отвечают аргументы type и chunk. Более подробно про различные
+        распределения и их эффективность в данной задаче можно ознакомиться
+        в секции <<Экспериментальная часть>>.
+    \item \texttt{\#pragma omp critical}\\
+        Объявляет некоторый блок кода как критическую секцию, также называемую
+        mutex. Данная секция в каждый момент времени может исполняться лишь 
+        одним потоком.
+    \item \texttt{\#pragma omp threadprivate(variables)}
+        По умолчанию все переменные объявленный внутри \texttt{omp parallel}
+        являются локальными для потока, а все объявленные вне её: за 
+        глобальные. Данная директива позволяет сделать исключение для 
+        некоторого списка переменных, которые будут объявлены вне 
+        \texttt{omp parallel}, но будут созданными для каждого
+        из потоков в отдельности.
+\end{itemize}
+Помимо директив используются следующие runtime функции библиотеки:
+\begin{itemize}
+    \item \texttt{omp\_get\_wtime()}\\
+        Возвращает астрономическое время, прошедшее после запуска
+        программы. 
+    \item \texttt{omp\_set\_num\_threads(n)}\\
+        Устанавливает количество потоков по умолчанию, которые будут
+        использованы для параллельного исполнения параллельных секций OpenMP.
+\end{itemize}
 \section*{Описание работы написанного кода}
+Глобально можно поделить программу на 2 логические части. Первая из них это 
+работа с изображением, включающее его ввод\slash вывод и трансформацию,
+принимающую функцию, которая будет применена ко всем пикселям изображения.
+Всё перечисленное реализовано в классе \texttt{PgmImage}. Думаю, не стоит отдельно
+останавливаться на реализации данного класса, так как ничего интересного в ней
+нет.
 
+Вторая часть это сам алгоритм Оцу, определяющий по гистограмме цветов пороговые 
+значения. Он реализован дважды: с директивами openmp и без. 
+
+\textit{
+Ps. Можно было конечно
+завернуть все обращения к функциям из openmp в ifdef, компилировать в make две
+версии программы: с fopenmp и без, а затем запускать нужную из них(в случае
+-1 в качестве первого аргумента бинарник без openmp, иначе с ним) при
+помощи bash скрипта. Но перелопачивать github CI мне не хочется.
+}
+
+Общая идея алгоритма следующая: изначально насчитываются взвешенные и не
+взвешенные префиксные суммы для гистограммы цветов: 
+\texttt{hist\_prefix} и \texttt{w\_hist\_prefix} соответственно. Далее
+рекурсивной процедурой \texttt{get\_partition} перебираются все
+разбиения и в функции \texttt{relax\_ans} для текущего разбиения 
+подсчитывается целевая функция и, если смогли улучшить свой прошлый ответ, то
+обновляем его на текущий.
+
+\subsection*{Предподсчёт}
+Функция \texttt{OtsuMultithread} является точкой входа в реализацию алгоритма.
+В ней насчитывается \texttt{hist\_prefix} и \texttt{w\_hist\_prefix}, начинается
+параллельная секция и инициализируются массивы \texttt{cur\_part} для каждого
+из потоков, так как благодаря директиве \texttt{\#pragma omp threadprivate(cur\_part)}
+он является локальным для каждого из потоков. Это необходимо, так как
+каждый из потоков перебирает своё подмножество разбиений и очевидно, что для
+хранения текущего разбиения каждого потока должна быть своя память.
+
+После описанных выше действий запускается функция \texttt{get\_partition},
+осуществляющая перебор разбиений.
+
+\begin{cppcode}
+#pragma omp threadprivate(cur_part)
+vector<uint8_t> OtsuMultithread(const vector<unsigned int>& hist) {
+    N = std::accumulate(hist.begin(), hist.end(), 0);
+    hist_prefix.resize(MAXP + 1, 0);
+    w_hist_prefix.resize(MAXP + 1, 0);
+
+    for (size_t i = 1; i <= MAXP; ++i) {
+        hist_prefix[i] = hist_prefix[i - 1] + hist[i - 1];
+        w_hist_prefix[i] = w_hist_prefix[i - 1] + 1ll * hist[i - 1] * (i - 1);
+    }
+
+#pragma omp parallel 
+    {
+        cur_part.resize(M - 1);
+        get_partition(1, 0);
+    }
+    return part;
+}
+\end{cppcode}
+\subsection*{Перебор разбиений}
+Реализация перебора является рекурсивной, благодаря чему работает для 
+произвольного количества цветовых зон, на которые делится изображение.
+
+Важной деталью реализации тут является то, что распараллеливается только цикл
+перебирающий первую границу разбиения. 
+В противном случае слишком много маленьких итераций, что работает на порядок 
+медленнее, чем данное решение. 
+
+Отметим то, что итерации в моей реализации имеют
+различную вычислительную сложность, так как чем меньше первая граница,
+тем больше существует разбиений оставшейся части цветов. Эта деталь во многом
+определяет выбор оптимального параметра для \texttt{schedule}.
+
+\begin{cppcode}
+void get_partition(int tl, int cur_th) {
+    if (cur_th == M - 1) {
+        relax_ans();
+    } else if (cur_th == 0) {
+#pragma omp for schedule(dynamic, 1)
+        for (size_t i = tl; i < MAXP; ++i) {
+            cur_part[cur_th] = i;
+            get_partition(i + 1, cur_th + 1);
+        }
+    } else {
+        for (size_t i = tl; i < MAXP; ++i) {
+            cur_part[cur_th] = i;
+            get_partition(i + 1, cur_th + 1);
+        }
+    }
+}
+\end{cppcode}
+\subsection*{Обновление ответа}
+В функции \texttt{relax\_ans}, насчитывается значение целевой функции для
+текущего разбиения на слагаемые, пользуясь подсчитанными 
+\texttt{hist\_prefix} и \texttt{w\_hist\_prefix}. Отдельно стоит отметить,
+что в данной функции есть запись в общие для потоков ячейки памяти 
+\texttt{part} и \texttt{part\_disp} и если два потока захотят одновременно
+обновить в них значения получится не пойми что, поэтому необходимо сделать обновление 
+ответа в критической секцией.
+
+Помимо этого, просто глядя на код не понятно, почему на строчках 19-27
+написан такой велосипед. Почему же нельзя было просто обойтись одним if 
+внутри критической секции? Потому что в таком случае это условие являлось
+бы бутылочным горлышком нашего алгоритма: потоки постоянно ждали бы доступа
+к проверке того, что их текущий ответ хуже, чем уже найденный, что происходит
+почти всегда. Такая реализация будет работать гораздо хуже даже однопоточной.
+\begin{cppcode}
+// [tl, tr)
+std::pair<unsigned long long, double> get_sums_for_part(int tl, int tr) {
+    unsigned long long q = get_sum(hist_prefix, tl, tr);
+    double mu = 1.0 * get_sum(w_hist_prefix, tl, tr) / q;
+    return {q, mu};
+}
+
+void relax_ans() {
+    double cur_disp = 0;
+    auto [q, mu] = get_sums_for_part(0, cur_part.front());
+    cur_disp += q * mu * mu;
+    for (size_t i = 1; i < cur_part.size(); ++i) {
+        std::tie(q, mu) = get_sums_for_part(cur_part[i - 1], cur_part[i]);
+        cur_disp += q * mu * mu;
+    }
+    std::tie(q, mu) = get_sums_for_part(cur_part.back(), MAXP);
+    cur_disp += q * mu * mu;
+
+    if (cur_disp > part_disp) {
+#pragma omp critical
+        {
+            if (cur_disp > part_disp) {
+                part = cur_part;
+                part_disp = cur_disp;
+            }
+        }
+    }
+}
+\end{cppcode}
 \section*{Результат работы программы}
 Секция генерируется автоматически при компиляции
 
@@ -164,7 +305,7 @@
 
 \texttt{ \captureshell*{cat /proc/cpuinfo | grep 'model name' | head -n 1} }
 
-\captureshell*[\devnull]{make -C ../ run &> /dev/null} 
+\texttt{ \captureshell*{make -sC ../ single} }
 
 \def\inputverbatim #1{\bgroup
   \def\do##1{\catcode`##1=12 }\dospecials
@@ -174,12 +315,17 @@
   \egroup
 }
 
-% { \footnotesize
-% \inputverbatim{../output} % TODO
-% }
+\captureshell*[\devnull]{convert ../out.pgm ../out/png &> /dev/null} 
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.45\textwidth]{in.png}
+    \quad
+    \includegraphics[width=0.45\textwidth]{../out.png}
+\end{figure}
 
 \section*{Экспериментальная часть}
-
+% TODO
 \section*{Список источников}
 \begin{itemize}
     \item \href{https://www.openmp.org//wp-content/uploads/cspec20.pdf}

@@ -3,3 +3,4 @@ omp4
 compile_commands.json
 .cache
 *.pgm
+*.png

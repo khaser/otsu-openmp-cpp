@@ -47,8 +47,10 @@ void relax_ans() {
     if (cur_disp > part_disp) {
 #pragma omp critical
         {
-            part = cur_part;
-            part_disp = cur_disp;
+            if (cur_disp > part_disp) {
+                part = cur_part;
+                part_disp = cur_disp;
+            }
         }
     }
 }
