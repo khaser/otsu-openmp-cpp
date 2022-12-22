@@ -1,4 +1,4 @@
-#include "otsu_multithread.h"
+#include "OtsuMultithread.h"
 
 #include <vector>
 #include <tuple>
